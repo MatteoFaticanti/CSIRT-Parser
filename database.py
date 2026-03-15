@@ -7,7 +7,6 @@ from typing import List, Set
 DB_PATH = "csirt_data.db"
 
 def init_db():
-    """Inizializza SQLite abilitando le performance avanzate (WAL)."""
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute('''
@@ -20,7 +19,7 @@ def init_db():
                 cvss REAL,
                 tecnologia TEXT,
                 tipologia_attacco TEXT,
-                argomenti TEXT,
+                argomenti TE
                 is_exploited BOOLEAN,
                 has_poc BOOLEAN,
                 data_inserimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
