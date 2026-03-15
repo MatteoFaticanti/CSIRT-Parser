@@ -37,7 +37,7 @@ app.layout = dmc.MantineProvider(
             dmc.AppShellHeader(
                 dmc.Group([
                     dmc.Text("🛡️", size="xl"),
-                    dmc.Title("CSIRT Italia — Threat Intelligence", order=3, c="white"),
+                    dmc.Title("CSIRT Italia Parser", order=3, c="white"),
                 ], h="100%", px="lg"),
                 style={"background": "#0f0f1a", "borderBottom": "1px solid #2d2e4a"},
             ),
