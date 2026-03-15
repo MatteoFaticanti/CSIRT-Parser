@@ -20,7 +20,7 @@ Un tool automatizzato per raccogliere, arricchire e visualizzare i bollettini di
 
 > Dashboard con KPI, grafici e tabella dettaglio bollettini
 >
-> 
+> ![alt text](https://github.com/MatteoFaticanti/CSIRT-Parser/blob/main/img.png?raw=true)
 
 ---
 
