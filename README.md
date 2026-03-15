@@ -10,7 +10,7 @@ Un tool automatizzato per raccogliere, arricchire e visualizzare i bollettini di
 - **Arricchimento CVE** tramite [CVEDB (Shodan)](https://cvedb.shodan.io) — CVSS, EPSS, KEV flag
 - **Cross-reference CISA KEV** — rileva automaticamente vulnerabilità attivamente sfruttate
 - **Classificazione automatica** della tipologia di attacco (RCE, Ransomware, SQLi, ecc.)
-- **Rilevamento tecnologia** tramite dizionario estensibile (100+ vendor/prodotti)
+- **Rilevamento tecnologia** tramite dizionario estensibile
 - **Dashboard interattiva** con [Dash](https://dash.plotly.com) + [Dash Mantine Components](https://www.dash-mantine-components.com)
 - **Persistenza su SQLite** con aggiornamenti incrementali 
 
