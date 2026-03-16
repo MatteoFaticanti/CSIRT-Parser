@@ -19,7 +19,7 @@ def init_db():
                 cvss REAL,
                 tecnologia TEXT,
                 tipologia_attacco TEXT,
-                argomenti TE
+                argomenti TEXT
                 is_exploited BOOLEAN,
                 has_poc BOOLEAN,
                 data_inserimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
