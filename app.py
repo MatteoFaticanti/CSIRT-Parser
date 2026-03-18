@@ -6,15 +6,20 @@ from database import DB_PATH
 
 app = Dash(__name__, external_stylesheets=dmc.styles.ALL)
 
+
 def carica_dati():
     df = pd.read_sql_query("SELECT * FROM bollettini", sqlite3.connect(DB_PATH))
-    df['cvss'] = df['cvss'].fillna(0.0)
     df['cve_correlate'] = df['cve_correlate'].apply(
         lambda s: ", ".join(json.loads(s)) if s else ""
     )
+    df['data_pubblicazione'] = pd.to_datetime(
+        df['data_pubblicazione'], utc=True, errors="coerce"
+    )
     return df
 
+
 df = carica_dati()
+
 
 def kpi_card(label, value, color, icon):
     return dmc.Paper(
@@ -29,7 +34,17 @@ def kpi_card(label, value, color, icon):
         style={"flex": 1, "background": "#1a1b2e", "borderColor": "#2d2e4a"},
     )
 
-# In DMC 2.x: navbar/header sono dict di config, i componenti vanno in children
+
+def cvss_badge(val):
+    if pd.isna(val) or val == 0.0:
+        return dmc.Badge("N/D", color="gray", variant="outline")
+    return dmc.Badge(
+        f"{val:.1f}",
+        color="red" if val >= 9 else "orange" if val >= 7 else "blue",
+        variant="light",
+    )
+
+
 app.layout = dmc.MantineProvider(
     forceColorScheme="dark",
     children=dmc.AppShell(
@@ -37,7 +52,7 @@ app.layout = dmc.MantineProvider(
             dmc.AppShellHeader(
                 dmc.Group([
                     dmc.Text("🛡️", size="xl"),
-                    dmc.Title("CSIRT Italia Parser", order=3, c="white"),
+                    dmc.Title("CSIRT Italia — Threat Intelligence", order=3, c="white"),
                 ], h="100%", px="lg"),
                 style={"background": "#0f0f1a", "borderBottom": "1px solid #2d2e4a"},
             ),
@@ -66,7 +81,8 @@ app.layout = dmc.MantineProvider(
                     dmc.SimpleGrid(id="grafici", cols=2),
                     dmc.Divider(),
                     dmc.Paper([
-                        dmc.Text("Dettaglio Bollettini", size="sm", c="dimmed", tt="uppercase", fw=600, style={"letterSpacing": 1}, mb="sm"),
+                        dmc.Text("Dettaglio Bollettini", size="sm", c="dimmed", tt="uppercase", fw=600,
+                                 style={"letterSpacing": 1}, mb="sm"),
                         dmc.Box(id="tabella"),
                     ], p="lg", radius="md", withBorder=True,
                        style={"background": "#1a1b2e", "borderColor": "#2d2e4a"}),
@@ -80,6 +96,7 @@ app.layout = dmc.MantineProvider(
     )
 )
 
+
 @callback(
     Output("kpi-row", "children"),
     Output("grafici",  "children"),
@@ -91,18 +108,26 @@ app.layout = dmc.MantineProvider(
     Input("solo-poc",       "checked"),
 )
 def aggiorna(cerca, cvss, tech, exp, poc):
-    d = df[df['cvss'] >= (cvss or 0)]
+    soglia = cvss or 0
+
+    if soglia == 0:
+        d = df.copy()
+    else:
+        d = df[df['cvss'].fillna(0) >= soglia]
+
     if cerca: d = d[d['cve_correlate'].str.contains(cerca, case=False, na=False)]
     if tech:  d = d[d['tecnologia'].isin(tech)]
     if exp:   d = d[d['is_exploited'] == 1]
     if poc:   d = d[d['has_poc'] == 1]
 
-    media = round(d.cvss.mean(), 1) if len(d) else 0.0
+    cvss_noti = d['cvss'].dropna()
+    media     = round(cvss_noti.mean(), 1) if len(cvss_noti) else 0.0
+    critici   = int((d['cvss'].fillna(0) >= 9).sum())
 
     kpis = [
-        kpi_card("Bollettini", len(d),                     "blue",   "📋"),
-        kpi_card("Critici",    len(d[d.cvss >= 9]),         "red",    "🚨"),
-        kpi_card("Exploited",  int(d.is_exploited.sum()),   "orange", "🔥"),
+        kpi_card("Bollettini", len(d),                   "blue",   "📋"),
+        kpi_card("Critici",    critici,                  "red",    "🚨"),
+        kpi_card("Exploited",  int(d.is_exploited.sum()), "orange", "🔥"),
         kpi_card("Media CVSS", media,
                  "red" if media >= 9 else "orange" if media >= 7 else "blue", "📊"),
     ]
@@ -120,22 +145,20 @@ def aggiorna(cerca, cvss, tech, exp, poc):
     fig_pie.update_traces(textposition="inside", textinfo="percent",
                           insidetextorientation="radial")
 
-    d_show = (d[['data_pubblicazione','titolo','cvss','cve_correlate',
-                 'tecnologia','tipologia_attacco','is_exploited','has_poc','url']]
-              .sort_values("data_pubblicazione", ascending=False))
+    d_show = (d[['data_pubblicazione', 'titolo', 'cvss', 'cve_correlate',
+                 'tecnologia', 'tipologia_attacco', 'is_exploited', 'has_poc', 'url']]
+              .sort_values("data_pubblicazione", ascending=False, na_position="last")
+              .reset_index(drop=True))
 
     rows = [
         dmc.TableTr([
-            dmc.TableTd(str(r.data_pubblicazione)[:10],
-                        style={"color": "#868e96", "fontSize": 12}),
+            dmc.TableTd(
+                r.data_pubblicazione.strftime("%Y-%m-%d") if pd.notna(r.data_pubblicazione) else "",
+                style={"color": "#868e96", "fontSize": 12}),
             dmc.TableTd(r.titolo,
                         style={"maxWidth": 300, "overflow": "hidden",
                                "textOverflow": "ellipsis", "whiteSpace": "nowrap"}),
-            dmc.TableTd(dmc.Badge(
-                f"{r.cvss:.1f}",
-                color="red" if r.cvss >= 9 else "orange" if r.cvss >= 7 else "blue",
-                variant="light",
-            )),
+            dmc.TableTd(cvss_badge(r.cvss)),
             dmc.TableTd(r.cve_correlate,
                         style={"maxWidth": 280, "overflow": "hidden",
                                "textOverflow": "ellipsis", "whiteSpace": "nowrap",
